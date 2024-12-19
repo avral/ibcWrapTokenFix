@@ -45,6 +45,8 @@ void wraptoken::init(const checksum256& chain_id, const name& bridge_contract, c
 
 void wraptoken::_issue(const name& prover, const bridge::actionproof actionproof)
 {
+    check(false, "disabled temporary");
+
     auto global = global_config.get();
 
     wraptoken::xfer lock_act = unpack<wraptoken::xfer>(actionproof.action.data);
@@ -145,6 +147,8 @@ void wraptoken::issueb(const name& prover, const bridge::lightproof blockproof, 
 
 void wraptoken::_cancel(const name& prover, const bridge::actionproof actionproof)
 {
+   check(false, "disabled temporary");
+
     auto global = global_config.get();
 
     wraptoken::xfer lock_act = unpack<wraptoken::xfer>(actionproof.action.data);
@@ -397,6 +401,41 @@ void wraptoken::close( const name& owner, const symbol& symbol )
    acnts.erase( it );
 
 }
+
+void wraptoken::issue( const name& to, const asset& quantity, const string& memo )
+{
+   require_auth( get_self() );
+
+   auto sym = quantity.symbol;
+   check( sym.is_valid(), "invalid symbol name" );
+   check( memo.size() <= 256, "memo has more than 256 bytes" );
+
+   stats statstable( get_self(), sym.code().raw() );
+   auto existing = statstable.find( sym.code().raw() );
+   check( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
+
+   const auto& st = *existing;
+
+   require_auth( st.issuer );
+
+   check( quantity.is_valid(), "invalid quantity" );
+   check( quantity.amount > 0, "must issue positive quantity" );
+
+   check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+   check( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
+
+   statstable.modify( st, same_payer, [&]( auto& s ) {
+      s.supply += quantity;
+   });
+
+   add_balance( _self, quantity, _self );
+
+   add_balance( to, asset(0, quantity.symbol), _self );
+
+   token::transfer_action act(_self, permission_level{_self, "active"_n});
+   act.send(_self, to, quantity, memo );
+}
+
 
 /*void wraptoken::clear(const std::vector<name> user_accounts, const std::vector<symbol> symbols){ 
 

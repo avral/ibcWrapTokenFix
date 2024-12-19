@@ -202,6 +202,11 @@ namespace eosio {
          [[eosio::action]]
          void enable();
 
+         /**
+          * Manually issue tokens
+          */
+         [[eosio::action]]
+         void issue( const name& to, const asset& quantity, const string& memo );
 
          //[[eosio::action]]
          //void clear(const std::vector<name> user_accounts, const std::vector<symbol> symbols);
